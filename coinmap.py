@@ -1,6 +1,8 @@
 '''
 Created on Dec 10, 2017
 
+Inspired by Coinmon - https://github.com/bichenkk/coinmon
+
 @author: Diablew
 '''
 #!/usr/bin/python3
