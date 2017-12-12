@@ -1,8 +1,6 @@
 '''
 Created on Dec 10, 2017
 
-Inspired by Coinmon - https://github.com/bichenkk/coinmon
-
 @author: Diablew
 '''
 #!/usr/bin/python3
@@ -10,7 +8,7 @@ import requests
 import argparse
 from datetime import datetime
 
-apiBaseUrl = "https://api.coinmarketcap.com/v1/"
+apiBaseUrl = "https://api.coinmarketcap.com/v1/ticker/"
 #https://api.coinmarketcap.com/v1/ticker/?limit=10
 
 class bcolors:
@@ -31,9 +29,13 @@ def coinmap():
                                  "percentage_change_1h", "percent_change_24h", "percent_change_7d",
                                  "name", "symbol"])
     parser.add_argument("-r", "--reverse", action="store_true", default=False)
+    parser.add_argument("-c", "--coin", help="Name of specific coin")
     args = parser.parse_args()
-
-    url = apiBaseUrl + "ticker/?limit={:d}".format(args.limit)
+    
+    if(args.coin is None):
+        url = apiBaseUrl + "?limit={:d}".format(args.limit)
+    else:
+        url = apiBaseUrl + args.coin 
     resp = requests.get(url)
     time_stamp = datetime.now()
     json_resp = resp.json()
@@ -47,12 +49,15 @@ def coinmap():
         coin['market_cap_usd'] = float(coin['market_cap_usd'])
     
     sorted_list = sorted(json_resp, key=lambda x: x[args.sort_type], reverse=args.reverse)
-
-    print ("""\n\t\t\t\t\t\t\t-----CoinMap------\n\nSorting by: {:}, Reversed: {:}, Limit: {:}
-------------------------------------------------------------------------------------------------------------------------------------------
+    
+    print ("\n\t\t\t\t\t\t\t-----CoinMap------\n\n")
+    if (args.coin is None):
+        print("Sorting by: {:}, Reversed: {:}, Limit: {:}".format(args.sort_type, args.reverse, args.limit))
+    else:
+        print("Selected Coin: {:}".format(args.coin))
+    print("""------------------------------------------------------------------------------------------------------------------------------------------
 ║ nR │  SYM  -      Coin      │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
-------------------------------------------------------------------------------------------------------------------------------------------"""
-        .format(args.sort_type, args.reverse, args.limit))
+------------------------------------------------------------------------------------------------------------------------------------------""")        
     n_rank = 1
     for coin in sorted_list:
         name = coin['name']
