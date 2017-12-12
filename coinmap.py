@@ -20,6 +20,10 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+    
+def get(url):
+    response = requests.get(url)
+    return response.json()
 
 def coinmap():
     #initialize argument parser
@@ -30,16 +34,31 @@ def coinmap():
                                  "percent_change_1h", "percent_change_24h", "percent_change_7d",
                                  "name", "symbol"])
     parser.add_argument("-r", "--reverse", default=False, action="store_true", help="Reverse sort order")
-    parser.add_argument("-c", "--coin", type=str, help="Name of specific coin")
+    parser.add_argument("-c", "--coin", type=str, nargs="+", help="Name of specific coin")
     args = parser.parse_args()
+    
+    json_resp = []
+    url = ""
+    time_stamp = datetime.now()
     #if specific coin is not specified, query list api
     if(args.coin is None):
         url = apiBaseUrl + "?limit={:d}".format(args.limit)
+        json_resp = get(url)
     else:
-        url = apiBaseUrl + args.coin 
-    resp = requests.get(url)
-    time_stamp = datetime.now()
-    json_resp = resp.json()
+        if(len(args.coin) == 1):
+            url = apiBaseUrl + args.coin[0]
+            json_resp = get(url)
+        else:
+            urls = [None]*len(args.coin)
+            json_resp = [None]*len(args.coin)
+            i = 0
+            for c in args.coin:
+                urls[i] = apiBaseUrl + c
+                i += 1 
+            i = 0
+            for u in urls:
+                json_resp[i] = get(u)[0] # returned list of 1
+                i += 1
     #cast str keys from JSON to correct number type
     for coin in json_resp:
         coin['rank'] = int(coin['rank'])
@@ -49,32 +68,34 @@ def coinmap():
         coin['percent_change_24h'] = float(coin['percent_change_24h'])
         coin['percent_change_7d'] = float(coin['percent_change_7d'])
         coin['market_cap_usd'] = float(coin['market_cap_usd'])
-    
+ 
     sorted_list = sorted(json_resp, key=lambda x: x[args.sort_type], reverse=args.reverse)
     
     print ("\n\t\t\t\t\t\t\t\t-----CoinMap------\n\n")
     if (args.coin is None):
         print("Sorting by: {:}, Reversed: {:}, Limit: {:}".format(args.sort_type, args.reverse, args.limit))
     else:
-        print("Selected Coin: {:}".format(args.coin))
+        print("Selected Coin(s): {:}".format(args.coin))
     print("""--------------------------------------------------------------------------------------------------------------------------------------------
 ║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
 --------------------------------------------------------------------------------------------------------------------------------------------""")        
     if (args.sort_type is "rank" or args.reverse): 
         n_rank = 1
     else: 
-        n_rank = sorted_list.__len__()
+        #n_rank = sorted_list.__len__()
+        n_rank = len(sorted_list)
     for coin in sorted_list:
         name = coin['name']
         symbol = coin['symbol']
-        rank = coin['rank']
-        price_usd = coin['price_usd']
-        vol_usd_24h = float(coin['24h_volume_usd']) #had to recast
-        percent_change_1h = coin['percent_change_1h']
-        percent_change_24h = coin['percent_change_24h']
-        percent_change_7d = coin['percent_change_7d']
-        market_cap_usd = coin['market_cap_usd']
+        rank = int(coin['rank'])
+        price_usd = float(coin['price_usd'])
+        vol_usd_24h = float(coin['24h_volume_usd']) #had to recast for some reason...
+        percent_change_1h = float(coin['percent_change_1h'])
+        percent_change_24h = float(coin['percent_change_24h'])
+        percent_change_7d = float(coin['percent_change_7d'])
+        market_cap_usd = float(coin['market_cap_usd'])
         
+        #colorize %chg nums 
         percent_change_1h_str = "{:^11.2%}".format(percent_change_1h / 100)
         if percent_change_1h < -5:
             percent_change_1h_str = bcolors.FAIL + percent_change_1h_str + bcolors.ENDC
@@ -104,6 +125,7 @@ def coinmap():
                        percent_change_24h_str, percent_change_7d_str, vol_usd_24h, market_cap_usd,
                        rank))
         print("--------------------------------------------------------------------------------------------------------------------------------------------")
+        #order rank
         if (args.sort_type is "rank" or args.reverse):
             n_rank += 1
         else:
