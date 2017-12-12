@@ -20,7 +20,7 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
-    
+
 def get(url):
     response = requests.get(url)
     return response.json()
@@ -83,10 +83,11 @@ def coinmap():
     sorted_list = sorted(json_resp, key=lambda x: x[args.sort_type], reverse=args.reverse)
     
     print ("\n\t\t\t\t\t\t\t\t-----CoinMap------\n\n")
-    print("Sorting by: {:}, Reversed: {:}, Limit: {:}".format(args.sort_type, args.reverse, args.limit))
     if (args.coin):
+        print("Sorting by: {:}, Reversed: {:}, Limit: {:}".format(args.sort_type, args.reverse, len(args.coin)))
         print("Selected Coin(s): {:}".format(args.coin))
     else:
+        print("Sorting by: {:}, Reversed: {:}, Limit: {:}".format(args.sort_type, args.reverse, args.limit))
         print("Selected Coin(s): Top {:}".format(args.limit))
     print("""--------------------------------------------------------------------------------------------------------------------------------------------
 ║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
@@ -107,7 +108,7 @@ def coinmap():
         market_cap_usd = float(coin['market_cap_usd'])
         
         # format and colorize %chg nums 
-        percent_change_1h_str = "{:^11.2%}".format(percent_change_1h / 100)
+        percent_change_1h_str = "{:^11.2%}".format(percent_change_1h / 100) 
         percent_change_1h_str = colorize(percent_change_1h, percent_change_1h_str)
             
         percent_change_24h_str = "{:^12.2%}".format(percent_change_24h / 100)
