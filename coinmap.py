@@ -52,10 +52,12 @@ def coinmap():
             urls = [None]*len(args.coin)
             json_resp = [None]*len(args.coin)
             i = 0
+            #create API url list for selected coins
             for c in args.coin:
                 urls[i] = apiBaseUrl + c
                 i += 1 
             i = 0
+            #create list of JSON responses for each coin
             for u in urls:
                 json_resp[i] = get(u)[0] # returned list of 1
                 i += 1
@@ -72,10 +74,11 @@ def coinmap():
     sorted_list = sorted(json_resp, key=lambda x: x[args.sort_type], reverse=args.reverse)
     
     print ("\n\t\t\t\t\t\t\t\t-----CoinMap------\n\n")
-    if (args.coin is None):
-        print("Sorting by: {:}, Reversed: {:}, Limit: {:}".format(args.sort_type, args.reverse, args.limit))
-    else:
+    print("Sorting by: {:}, Reversed: {:}, Limit: {:}".format(args.sort_type, args.reverse, args.limit))
+    if (args.coin):
         print("Selected Coin(s): {:}".format(args.coin))
+    else:
+        print("Selected Coin(s): Top {:}".format(args.limit))
     print("""--------------------------------------------------------------------------------------------------------------------------------------------
 ║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
 --------------------------------------------------------------------------------------------------------------------------------------------""")        
