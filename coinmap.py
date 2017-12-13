@@ -14,6 +14,7 @@ apiBaseUrl = "https://api.coinmarketcap.com/v1/ticker/"
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
+    BLUE = '\x1b[0;36;40m'
     OKGREEN = '\033[92m'
     WARNING = '\033[93m'
     FAIL = '\033[91m'
@@ -43,6 +44,8 @@ def colorize(num, f, s):
         return bcolors.FAIL + s + bcolors.ENDC
     elif num < 0:
         return bcolors.WARNING + s + bcolors.ENDC
+    elif num > 5 and num < 10:
+        return bcolors.BLUE + s + bcolors.ENDC
     elif num > 10:
         return bcolors.OKGREEN + s + bcolors.ENDC
     return s
@@ -90,7 +93,7 @@ def coinmap():
         coin['24h_volume_usd'] = float(coin['24h_volume_usd'])
         coin['percent_change_1h'] = float(coin['percent_change_1h'])
         coin['percent_change_24h'] = float(coin['percent_change_24h'])
-        coin['percent_change_7d'] = float(coin['percent_change_7d'])
+        coin['percent_change_7d'] = float(coin['percent_change_7d'])    ##FIX: breaks when n > 479, sometimes less
         coin['market_cap_usd'] = float(coin['market_cap_usd'])
 
     # sort compiled list by selected metric
@@ -103,14 +106,14 @@ def coinmap():
     else:
         print("Sorting by: {}, Reversed: {}, Limit: {}".format(args.sort_type, args.reverse, args.limit))
         print("Selected Coin(s): Top {}".format(args.limit))
-    print("""--------------------------------------------------------------------------------------------------------------------------------------------
+    print(bcolors.HEADER + """--------------------------------------------------------------------------------------------------------------------------------------------
 ║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
---------------------------------------------------------------------------------------------------------------------------------------------""")        
+--------------------------------------------------------------------------------------------------------------------------------------------""" + bcolors.ENDC)        
     if (args.sort_type is "rank" or args.reverse): 
         n_rank = 1
     else: 
         n_rank = len(sorted_list)
-    for coin in sorted_list:
+    for i, coin in enumerate(sorted_list, start=1):
         name = coin['name']
         symbol = coin['symbol']
         rank = int(coin['rank'])
@@ -125,16 +128,21 @@ def coinmap():
         pchange_7d_str = colorize(percent_change_7d, None, "{:^11.2%}".format(percent_change_7d / 100))
         pchange_24h_str = colorize(percent_change_24h, None, "{:^12.2%}".format(percent_change_24h / 100))
         pchange_1h_str = colorize(percent_change_1h, None, "{:^11.2%}".format(percent_change_1h / 100))
-        n_rank_str = colorize(n_rank, 'bold', "{:^4}".format(n_rank))
-        price_str = colorize(price_usd, 'bold', "${:>12,}".format(price_usd))
-        vol_str = colorize(vol_usd_24h, 'bold', "${:>16,}".format(vol_usd_24h))
-        mcap_str = colorize(market_cap_usd, 'bold', "${:>18,}".format(market_cap_usd))
-         
-        print ("║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {:^4} ║"
-               .format(n_rank_str, symbol, name, price_str, pchange_1h_str, 
-                       pchange_24h_str, pchange_7d_str, vol_str, mcap_str,
-                       rank))
-        print("--------------------------------------------------------------------------------------------------------------------------------------------")
+        n_rank_str = "{:^4}".format(n_rank)
+        price_str = "${:>12,}".format(price_usd)
+        vol_str = "${:>16,}".format(vol_usd_24h)
+        mcap_str = "${:>18,}".format(market_cap_usd)
+        #n_rank_str = colorize(n_rank, 'bold', "{:^4}".format(n_rank))
+        #price_str = colorize(price_usd, 'bold', "${:>12,}".format(price_usd))
+        #vol_str = colorize(vol_usd_24h, 'bold', "${:>16,}".format(vol_usd_24h))
+        #mcap_str = colorize(market_cap_usd, 'bold', "${:>18,}".format(market_cap_usd))
+		
+        row = "║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {:^4} ║ \n--------------------------------------------------------------------------------------------------------------------------------------------".format(n_rank_str, symbol, name, price_str, pchange_1h_str, 
+                                                   pchange_24h_str, pchange_7d_str, vol_str, mcap_str, rank)
+        if (i % 2 == 0):
+            print (bcolors.BOLD + row + bcolors.ENDC)
+        else:
+            print (row)
         # order rank
         if (args.sort_type is "rank" or args.reverse):
             n_rank += 1
