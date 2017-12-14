@@ -49,7 +49,7 @@ def colorize(num, f, s):
     elif num > 10:
         return bcolors.OKGREEN + s + bcolors.ENDC
     return s
-
+    
 def coinmap():
     # initialize argument parser
     parser = argparse.ArgumentParser(description="A program that lists cryptocurrency data sourced from coinmarketcap.com")
@@ -97,6 +97,8 @@ def coinmap():
         coin['market_cap_usd'] = float(coin['market_cap_usd'])
 
     # sort compiled list by selected metric
+    if args.sort_type != 'rank' and args.sort_type != 'name':
+        args.reverse = not args.reverse
     sorted_list = sorted(json_resp, key=lambda x: x[args.sort_type], reverse=args.reverse)
     
     print ("\n\t\t\t\t\t\t\t\t-----CoinMap------\n\n")
@@ -109,11 +111,7 @@ def coinmap():
     print(bcolors.HEADER + """--------------------------------------------------------------------------------------------------------------------------------------------
 ║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
 --------------------------------------------------------------------------------------------------------------------------------------------""" + bcolors.ENDC)        
-    if (args.sort_type is "rank" or args.reverse): 
-        n_rank = 1
-    else: 
-        n_rank = len(sorted_list)
-    for i, coin in enumerate(sorted_list, start=1):
+    for n_rank, coin in enumerate(sorted_list, start=1):
         name = coin['name']
         symbol = coin['symbol']
         rank = int(coin['rank'])
@@ -128,26 +126,33 @@ def coinmap():
         pchange_7d_str = colorize(percent_change_7d, None, "{:^11.2%}".format(percent_change_7d / 100))
         pchange_24h_str = colorize(percent_change_24h, None, "{:^12.2%}".format(percent_change_24h / 100))
         pchange_1h_str = colorize(percent_change_1h, None, "{:^11.2%}".format(percent_change_1h / 100))
-        n_rank_str = "{:^4}".format(n_rank)
         price_str = "${:>12,}".format(price_usd)
         vol_str = "${:>16,}".format(vol_usd_24h)
-        mcap_str = "${:>18,}".format(market_cap_usd)
+        mcap_str = "${:>18,}".format(market_cap_usd)         
+        #if (args.sort_type is 'rank' and not args.reverse) or (args.sort_type is 'name' and args.reverse) :
+        if (args.sort_type == 'rank' or args.sort_type == 'name') and not args.reverse:
+            n_rank_str = "{:^4}".format(n_rank)
+        elif args.sort_type == 'name' and args.reverse:
+            n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
+        elif args.sort_type == 'name' and not args.reverse:
+            n_rank_str = "{:^4}".format(n_rank) 
+        elif args.sort_type != 'rank' and args.sort_type != 'name' and args.reverse:
+            n_rank_str = "{:^4}".format(n_rank)
+        elif args.sort_type != 'rank' and args.sort_type != 'name':
+            n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
+        else:
+            n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
         #n_rank_str = colorize(n_rank, 'bold', "{:^4}".format(n_rank))
         #price_str = colorize(price_usd, 'bold', "${:>12,}".format(price_usd))
         #vol_str = colorize(vol_usd_24h, 'bold', "${:>16,}".format(vol_usd_24h))
         #mcap_str = colorize(market_cap_usd, 'bold', "${:>18,}".format(market_cap_usd))
-		
+        
         row = "║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {:^4} ║ \n--------------------------------------------------------------------------------------------------------------------------------------------".format(n_rank_str, symbol, name, price_str, pchange_1h_str, 
                                                    pchange_24h_str, pchange_7d_str, vol_str, mcap_str, rank)
-        if (i % 2 == 0):
+        if (n_rank % 2 == 0):
             print (bcolors.BOLD + row + bcolors.ENDC)
         else:
             print (row)
-        # order rank
-        if (args.sort_type is "rank" or args.reverse):
-            n_rank += 1
-        else:
-            n_rank -= 1
     print("Data source from coinmarketcap.com at {:}".format(time_stamp))
     
 if __name__ == "__main__":
