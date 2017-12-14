@@ -128,30 +128,30 @@ def coinmap():
         pchange_1h_str = colorize(percent_change_1h, None, "{:^11.2%}".format(percent_change_1h / 100))
         price_str = "${:>12,}".format(price_usd)
         vol_str = "${:>16,}".format(vol_usd_24h)
-        mcap_str = "${:>18,}".format(market_cap_usd)         
-        # sorting by rank or name, forward
-        if (args.sort_type == 'rank' or args.sort_type == 'name') and not args.reverse:
-            n_rank_str = "{:^4}".format(n_rank)
-        # sorting by rank or name, reversed
-        elif (args.sort_type == 'rank' or args.sort_type == 'name') and args.reverse:
-            n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
-        # sorting by ints, reversed
-        elif args.sort_type != 'rank' and args.sort_type != 'name' and args.reverse:
-            n_rank_str = "{:^4}".format(n_rank)
-        # sorting ints, forward
-        elif args.sort_type != 'rank' and args.sort_type != 'name':
-            n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
+        mcap_str = "${:>18,}".format(market_cap_usd)   
         #n_rank_str = colorize(n_rank, 'bold', "{:^4}".format(n_rank))
         #price_str = colorize(price_usd, 'bold', "${:>12,}".format(price_usd))
         #vol_str = colorize(vol_usd_24h, 'bold', "${:>16,}".format(vol_usd_24h))
         #mcap_str = colorize(market_cap_usd, 'bold', "${:>18,}".format(market_cap_usd))
-        
-        row = "║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {:^4} ║ \n--------------------------------------------------------------------------------------------------------------------------------------------".format(n_rank_str, symbol, name, price_str, pchange_1h_str, 
-                                                   pchange_24h_str, pchange_7d_str, vol_str, mcap_str, rank)
-        if (n_rank % 2 == 0):
-            print (bcolors.BOLD + row + bcolors.ENDC)
-        else:
-            print (row)
+                
+        # sorting by rank or name, forward - or - num, reverse
+        if ((args.sort_type == 'rank' or args.sort_type == 'name') and not args.reverse) or \
+            (args.sort_type != 'rank' and args.sort_type != 'name' and args.reverse):
+            n_rank_str = "{:^4}".format(n_rank)
+        # sorting by rank or name, reversed - or - num, forward
+        elif ((args.sort_type == 'rank' or args.sort_type == 'name') and args.reverse) or \
+              (args.sort_type != 'rank' and args.sort_type != 'name'):
+            n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
+            
+        strs = [n_rank_str, symbol, name, price_str, pchange_1h_str, pchange_24h_str, pchange_7d_str, 
+                      vol_str, mcap_str, str(rank)]
+        ## TODO: Bold/highlight every other line
+        #if (n_rank % 2 == 0):
+            #for i, s in enumerate(strs):
+                #if u
+            #    strs[i] = bcolors.BOLD + s + bcolors.ENDC
+        print ("║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {:^4} ║ \n--------------------------------------------------------------------------------------------------------------------------------------------".format(strs[0], strs[1], strs[2], strs[3], strs[4], 
+                                       strs[5], strs[6], strs[7], strs[8], strs[9]))
     print("Data source from coinmarketcap.com at {:}".format(time_stamp))
     
 if __name__ == "__main__":
