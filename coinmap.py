@@ -129,18 +129,17 @@ def coinmap():
         price_str = "${:>12,}".format(price_usd)
         vol_str = "${:>16,}".format(vol_usd_24h)
         mcap_str = "${:>18,}".format(market_cap_usd)         
-        #if (args.sort_type is 'rank' and not args.reverse) or (args.sort_type is 'name' and args.reverse) :
+        # sorting by rank or name, forward
         if (args.sort_type == 'rank' or args.sort_type == 'name') and not args.reverse:
             n_rank_str = "{:^4}".format(n_rank)
-        elif args.sort_type == 'name' and args.reverse:
+        # sorting by rank or name, reversed
+        elif (args.sort_type == 'rank' or args.sort_type == 'name') and args.reverse:
             n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
-        elif args.sort_type == 'name' and not args.reverse:
-            n_rank_str = "{:^4}".format(n_rank) 
+        # sorting by ints, reversed
         elif args.sort_type != 'rank' and args.sort_type != 'name' and args.reverse:
             n_rank_str = "{:^4}".format(n_rank)
+        # sorting ints, forward
         elif args.sort_type != 'rank' and args.sort_type != 'name':
-            n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
-        else:
             n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
         #n_rank_str = colorize(n_rank, 'bold', "{:^4}".format(n_rank))
         #price_str = colorize(price_usd, 'bold', "${:>12,}".format(price_usd))
