@@ -6,10 +6,12 @@ Created on Dec 10, 2017
 #!/usr/bin/python3
 import requests
 import argparse
+import csv
 from datetime import datetime
 from requests import structures
 
-apiBaseUrl = "https://api.coinmarketcap.com/v1/ticker/"
+api_base_url = "https://api.coinmarketcap.com/v1/ticker/"
+coin_vals = {}
 
 class bcolors:
     HEADER = '\033[95m'
@@ -50,6 +52,29 @@ def colorize(num, f, s):
         return bcolors.OKGREEN + s + bcolors.ENDC
     return s
     
+def print_rows(strs):
+    print ("║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {:^4} ║ \n--------------------------------------------------------------------------------------------------------------------------------------------".format(strs[0], strs[1], strs[2], strs[3], strs[4], 
+                                       strs[5], strs[6], strs[7], strs[8], strs[9]))
+                                       
+def print_rows_net(strs):
+    print ("║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {} - {} │ {:^4} ║ \n----------------------------------------------------------------------------------------------------------------------------------------------------------------".format(strs[0], strs[1], strs[2], strs[3], strs[4], 
+                                       strs[5], strs[6], strs[7], strs[8], strs[9], strs[10], strs[11]))
+    
+def print_headers():
+     print(bcolors.HEADER + """--------------------------------------------------------------------------------------------------------------------------------------------
+║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
+--------------------------------------------------------------------------------------------------------------------------------------------""" + bcolors.ENDC) 
+    
+def print_headers_net():
+     print(bcolors.HEADER + """----------------------------------------------------------------------------------------------------------------------------------------------------------------
+║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Net value - % Chg │ Rank ║
+----------------------------------------------------------------------------------------------------------------------------------------------------------------""" + bcolors.ENDC) 
+
+#================================================================================================================
+#TODO:
+#Store balances & transactions, calculate total earn/loss
+#Read csv
+#================================================================================================================
 def coinmap():
     # initialize argument parser
     parser = argparse.ArgumentParser(description="A program that lists cryptocurrency data sourced from coinmarketcap.com")
@@ -60,6 +85,7 @@ def coinmap():
                                  "name", "symbol"])
     parser.add_argument("-r", "--reverse", default=False, action="store_true", help="Reverse sort order")
     parser.add_argument("-c", "--coin", type=str, nargs="+", help="Name of specific coin")
+    parser.add_argument("-f", "--file", help="csv transaction history")
     args = parser.parse_args()
     
     json_resp = []
@@ -67,11 +93,11 @@ def coinmap():
     time_stamp = datetime.now()
     # if specific coin is not specified, query list api
     if(args.coin is None):
-        url = apiBaseUrl + "?limit={:d}".format(args.limit)
+        url = api_base_url + "?limit={:d}".format(args.limit)
         json_resp = get(url)
     else:
         if(len(args.coin) == 1):
-            url = apiBaseUrl + args.coin[0]
+            url = api_base_url + args.coin[0]
             json_resp = get(url)
         else:
             urls = [None]*len(args.coin)
@@ -79,7 +105,7 @@ def coinmap():
             i = 0
             # create API url list for selected coins
             for c in args.coin:
-                urls[i] = apiBaseUrl + c
+                urls[i] = api_base_url + c
                 i += 1 
             i = 0
             # create list of JSON responses for each coin
@@ -102,15 +128,17 @@ def coinmap():
     sorted_list = sorted(json_resp, key=lambda x: x[args.sort_type], reverse=args.reverse)
     
     print ("\n\t\t\t\t\t\t\t\t-----CoinMap------\n\n")
-    if (args.coin):
+    if (args.coin): # specific coins selected
         print("Sorting by: {}, Reversed: {}, Limit: {}".format(args.sort_type, args.reverse, len(args.coin)))
         print("Selected Coin(s): {:}".format(args.coin))
-    else:
+    else:           # coinmarketcap's top 10
         print("Sorting by: {}, Reversed: {}, Limit: {}".format(args.sort_type, args.reverse, args.limit))
         print("Selected Coin(s): Top {}".format(args.limit))
-    print(bcolors.HEADER + """--------------------------------------------------------------------------------------------------------------------------------------------
-║ nR │  SYM  -       Coin       │      Price    │ Change (1H) | Change (24H) │ Change (7D) │    Volume (24H)   │     Market Cap      │ Rank ║
---------------------------------------------------------------------------------------------------------------------------------------------""" + bcolors.ENDC)        
+    if (args.file): # gather data from csv if file argument is passed
+        portfolio = read_csv(args.file)
+        print_headers_net()
+    else: 
+        print_headers()
     for n_rank, coin in enumerate(sorted_list, start=1):
         name = coin['name']
         symbol = coin['symbol']
@@ -122,13 +150,27 @@ def coinmap():
         percent_change_7d = float(coin['percent_change_7d'])
         market_cap_usd = float(coin['market_cap_usd'])
         
+        # Calculate net value and percent change
+        pchange = None
+        t_val = None
+        if(name in portfolio):
+            o_val = 0.0
+            c_val = 0.0
+            for t in portfolio[name]:
+                o_val += t[1] * t[2]
+                c_val += t[1] * price_usd
+            #t_val = o_val - c_val if o_val > c_val else c_val - o_val
+            #t_val = c_val - o_val
+            pchange, t_val = get_pchange(o_val, c_val)
+            #print ("o_val: {:.2f}\nc_val: {:.2f}\nt_val: {:.2f}\npchange: {:.2%}".format(o_val, c_val, t_val, pchange))
+        
         # format and colorize vals 
         pchange_7d_str = colorize(percent_change_7d, None, "{:^11.2%}".format(percent_change_7d / 100))
         pchange_24h_str = colorize(percent_change_24h, None, "{:^12.2%}".format(percent_change_24h / 100))
         pchange_1h_str = colorize(percent_change_1h, None, "{:^11.2%}".format(percent_change_1h / 100))
         price_str = "${:>12,}".format(price_usd)
-        vol_str = "${:>16,}".format(vol_usd_24h)
-        mcap_str = "${:>18,}".format(market_cap_usd)   
+        vol_str = "${:>16,.0f}".format(vol_usd_24h)
+        mcap_str = "${:>18,.0f}".format(market_cap_usd)   
         #n_rank_str = colorize(n_rank, 'bold', "{:^4}".format(n_rank))
         #price_str = colorize(price_usd, 'bold', "${:>12,}".format(price_usd))
         #vol_str = colorize(vol_usd_24h, 'bold', "${:>16,}".format(vol_usd_24h))
@@ -143,16 +185,62 @@ def coinmap():
               (args.sort_type != 'rank' and args.sort_type != 'name'):
             n_rank_str = "{:^4}".format(len(sorted_list) - n_rank + 1)           
             
-        strs = [n_rank_str, symbol, name, price_str, pchange_1h_str, pchange_24h_str, pchange_7d_str, 
-                      vol_str, mcap_str, str(rank)]
+        
         ## TODO: Bold/highlight every other line
         #if (n_rank % 2 == 0):
-            #for i, s in enumerate(strs):
-                #if u
-            #    strs[i] = bcolors.BOLD + s + bcolors.ENDC
-        print ("║{}│ {:^5} - {:^16} │ {} │ {} │ {} │ {} │ {} │ {} │ {:^4} ║ \n--------------------------------------------------------------------------------------------------------------------------------------------".format(strs[0], strs[1], strs[2], strs[3], strs[4], 
-                                       strs[5], strs[6], strs[7], strs[8], strs[9]))
+        #    for i, s in enumerate(strs):
+        #        if u
+        #           strs[i] = bcolors.BOLD + s + bcolors.ENDC
+        # store values
+        coin_vals[name] = [n_rank, symbol, price_usd, percent_change_1h, percent_change_24h, percent_change_7d,                   vol_usd_24h, market_cap_usd, rank]
+        if (args.file):
+            t_val_str = "{:.2f}".format(t_val) if t_val else "  N/A  "
+            pchange_str = "{:.2%}".format(pchange) if pchange else "  N/A  "
+            strs = [n_rank_str, symbol, name, price_str, pchange_1h_str, pchange_24h_str, pchange_7d_str, 
+                    vol_str, mcap_str, t_val_str, pchange_str, str(rank)]
+            print_rows_net(strs)
+        else:
+            strs = [n_rank_str, symbol, name, price_str, pchange_1h_str, pchange_24h_str, pchange_7d_str, 
+                    vol_str, mcap_str, str(rank)]
+            print_rows(strs)
     print("Data source from coinmarketcap.com at {:}".format(time_stamp))
     
+def get_pchange(orig, curr):
+    if curr > orig:     # increase / profit
+        pchange = ((curr - orig) / orig)
+    else:               # decrease / loss
+        pchange = ((orig - curr) / orig)
+    return [pchange, orig * pchange]
+        
+## Approach 1: make map of coin name to list of transactions then calculate totals from there
+# {coin_name: [net value, net %]}
+#  ETHEREUM    BOUGHT    1    730    12/13
+#  curr_price = 800 -> %
+# Approach 2: ->>> map coin to list of lists
+# Approach 3: map coin name to list of tuples (action, quantity, price), pass list to coinmap(), calculate and 
+#             display when working on selected coin
+#
+def read_csv(file):
+    #parser = argparse.ArgumentParser(description="test read csv")   
+    #parser.add_argument("-f", "--file", help="csv transaction history")
+    #args = parser.parse_args()
+    #with open(args.file, 'r') as f:
+    with open(file, 'r') as f:
+        reader = csv.reader(f)
+        coins = {}
+        for row in reader:
+            r = row[0].split('\t')
+            coin_name = r[0]
+            action = r[1]
+            quantity = float(r[2])
+            coin_price = float(r[3])
+            date = r[4]
+            if (coin_name in coins):
+                coins[coin_name].append((action, quantity, coin_price))
+            else:
+                coins[coin_name] = [(action, quantity, coin_price)]
+        return coins
+        
 if __name__ == "__main__":
     coinmap()
+    #read_csv()
