@@ -71,9 +71,13 @@ def print_headers(file, row_len):
         print("║ nR  │  SYM  -       Coin       │     Price    │ Chg (1H) | Chg (1D) │ Chg (7D) │   Volume (1D)   │    Market Cap    │ oR  ║")
     print('-'*row_len + bcolors.ENDC) 
 
-def print_footers(file, row_len, time_stamp, t_profit, avg_p_change):
+def print_footers(file, row_len, time_stamp, i_investment, t_profit, avg_p_change):
+    spacing = 6
     row = "Data source from coinmarketcap.com at {:}".format(time_stamp)
-    print ("{} {} {:,.2f} - {:.2%}".format(row, ' '*54, t_profit, avg_p_change)) if file else print (row)
+    if file:
+        print ("{} {} Investment: {:,.2f}{}Total Profit - % Chg: {:,.2f} - {:.2%}".format(row, ' '*spacing, i_investment, ' '*spacing, t_profit, avg_p_change)) 
+    else:
+        print (row)
     
 def cast_strs(json_resp):
     for coin in json_resp:
@@ -149,6 +153,7 @@ def coinmap():
         row_len = 125
     t_profit = 0.0
     avg_p_change = 0.0
+    i_investment = 0.0
     p_size = 0
     print_headers(args.file, row_len)
     for n_rank, coin in enumerate(sorted_list, start=1):
@@ -176,6 +181,7 @@ def coinmap():
                 p_change, profit = get_p_change(o_val, c_val)
                 t_profit += profit
                 avg_p_change += p_change
+                i_investment += o_val
         
         # sorting by rank or name, forward - or - num, reverse
         if ((args.sort_type == 'rank' or args.sort_type == 'name') and not args.reverse) or \
@@ -216,7 +222,7 @@ def coinmap():
                     vol_str, mcap_str, o_rank_str]
         print_rows(strs, row_len)
     avg_p_change /= p_size if args.file else 1
-    print_footers(args.file, row_len, time_stamp, t_profit, avg_p_change)
+    print_footers(args.file, row_len, time_stamp, i_investment, t_profit, avg_p_change)
     
 def get_p_change(orig, curr):
     if curr > orig:     # increase / profit
