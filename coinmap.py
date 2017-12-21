@@ -71,11 +71,11 @@ def print_headers(file, row_len):
         print("║ nR  │  SYM  -       Coin       │     Price    │ Chg (1H) | Chg (1D) │ Chg (7D) │   Volume (1D)   │    Market Cap    │ oR  ║")
     print('-'*row_len + bcolors.ENDC) 
 
-def print_footers(file, row_len, time_stamp, i_investment, t_profit, avg_p_change):
-    spacing = 6
+def print_footers(file, row_len, time_stamp, i_investment, t_profit, t_p_change, n_val, avg_p_change):
+    spacing = 14*' '
     row = "Data source from coinmarketcap.com at {:}".format(time_stamp)
     if file:
-        print ("{} {} Investment: {:,.2f}{}Total Profit - % Chg: {:,.2f} - {:.2%}".format(row, ' '*spacing, i_investment, ' '*spacing, t_profit, avg_p_change)) 
+        print ("Investment: {:,.2f}{}Net Value: {:,.2f}{}Total Profit - % Chg: {:,.2f} - {:.2%}{}Avg % Chg: {:.2%}\n{}".format(i_investment, spacing, n_val, spacing, t_profit, t_p_change, spacing, avg_p_change, row)) 
     else:
         print (row)
     
@@ -176,12 +176,14 @@ def coinmap():
                 o_val = 0.0
                 c_val = 0.0
                 for t in portfolio[name]:
-                    o_val += t[1] * t[2]
-                    c_val += t[1] * price_usd
+                    o_val += t[1] * t[2]            # amt * price paid
+                    c_val += t[1] * price_usd       # amt * current price
+                    #print("{}\n\t\to_val:{}\n\t\tc_val:{}".format(t, o_val, c_val))
                 p_change, profit = get_p_change(o_val, c_val)
                 t_profit += profit
                 avg_p_change += p_change
                 i_investment += o_val
+                #print("profit:{}\nt_profit:{}\np_change:{}\navg_p_change: {}".format(profit, t_profit, p_change, avg_p_change))
         
         # sorting by rank or name, forward - or - num, reverse
         if ((args.sort_type == 'rank' or args.sort_type == 'name') and not args.reverse) or \
@@ -222,7 +224,9 @@ def coinmap():
                     vol_str, mcap_str, o_rank_str]
         print_rows(strs, row_len)
     avg_p_change /= p_size if args.file else 1
-    print_footers(args.file, row_len, time_stamp, i_investment, t_profit, avg_p_change)
+    n_val = t_profit + i_investment
+    t_p_change = (n_val - i_investment)/ i_investment
+    print_footers(args.file, row_len, time_stamp, i_investment, t_profit, t_p_change, n_val, avg_p_change)
     
 def get_p_change(orig, curr):
     if curr > orig:     # increase / profit
@@ -233,7 +237,7 @@ def get_p_change(orig, curr):
         
 ## Approach 1: make map of coin name to list of transactions then calculate totals from there
 # {coin_name: [net value, net %]}
-#  ETHEREUM    BOUGHT    1    730    12/13
+#  Ethereum    BOUGHT    1.0    730.0    Dec-13
 #  curr_price = 800 -> %
 # Approach 2: ->>> map coin to list of lists
 # Approach 3: map coin name to list of tuples (action, quantity, price), pass list to coinmap(), calculate and 
