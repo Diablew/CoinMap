@@ -63,9 +63,17 @@ def print_rows(strs, row_len):
                strs[2], strs[3], strs[4], strs[5], strs[6], strs[7], strs[8], strs[9], strs[10], strs[11])
     print(row + '\n' + '-'*row_len)
     
-def print_headers(file, row_len):
+def print_headers(args, row_len):
+    print ("\n\t\t\t\t\t\t\t\t-----CoinMap------\n\n")
+    if (args.coin): # specific coins selected
+        print("Sorting by: {}, Reversed: {}, Limit: {}".format(args.sort_type, args.reverse, len(args.coin)))
+        print("Selected Coin(s): {:}".format(args.coin))
+    else:           # coinmarketcap's top 10
+        print("Sorting by: {}, Reversed: {}, Limit: {}".format(args.sort_type, args.reverse, args.limit))
+        print("Selected Coin(s): Top {}".format(args.limit))
+
     print(bcolors.HEADER + '-'*row_len)
-    if file:
+    if args.file:
         print("║ nR  │  SYM  -       Coin       │     Price    │ Chg (1H) | Chg (1D) │ Chg (7D) │   Volume (1D)   │    Market Cap    │  Profit -  % Chg  │ oR  ║")
     else:
         print("║ nR  │  SYM  -       Coin       │     Price    │ Chg (1H) | Chg (1D) │ Chg (7D) │   Volume (1D)   │    Market Cap    │ oR  ║")
@@ -109,29 +117,46 @@ def coinmap():
     json_resp = []
     url = ""
     time_stamp = datetime.now()
+    # gather data from csv if file argument is passed
+    if (args.file):
+        portfolio = read_csv(args.file)
+        row_len = 145
+    else:
+        row_len = 125
+    n_val = 0
+    t_profit = 0.0
+    t_p_change = 0.0
+    avg_p_change = 0.0
+    i_investment = 0.0
+    p_size = 0
     # if specific coin is not specified, query list api
     if(args.coin is None):
         url = api_base_url + "?limit={:d}".format(args.limit)
         json_resp = get(url)
     else:
-        if(len(args.coin) == 1):
+        urls = []
+        json_resp = []
+        if(args.coin[0] != 'infile' and len(args.coin) == 1):
             url = api_base_url + args.coin[0]
             json_resp = get(url)
+            if 'error' in json_resp:    
+                print ("url: {}\njson_resp: {}".format(url, json_resp))
+                return
         else:
-            urls = [None]*len(args.coin)
-            json_resp = [None]*len(args.coin)
-            i = 0
             # create API url list for selected coins
             for c in args.coin:
-                urls[i] = api_base_url + c
-                i += 1 
-            i = 0
-            # create list of JSON responses for each coin
-            for u in urls:
-                json_resp[i] = get(u)[0] # returns list of dict (json)
-                i += 1
-    
-    # cast string values from JSON to correct type for sorting
+                if(c == 'infile'):
+                    for c in portfolio:
+                        urls.append(api_base_url  + c.lower())
+                else:
+                    urls.append(api_base_url + c)
+                print(urls)
+        for u in urls:
+            json_resp.append(get(u)[0]) # returns list of dict (json)
+            if 'error' in json_resp:    
+                print ("url: {}\njson_resp: {}".format(get(u), json_resp))
+                return
+    # cast string values from JSON to correct type for sorting\
     cast_strs(json_resp)
     
     # sort compiled list by selected metric
@@ -139,24 +164,10 @@ def coinmap():
         args.reverse = not args.reverse
     sorted_list = sorted(json_resp, key=lambda x: x[args.sort_type], reverse=args.reverse)
     
-    print ("\n\t\t\t\t\t\t\t\t-----CoinMap------\n\n")
-    if (args.coin): # specific coins selected
-        print("Sorting by: {}, Reversed: {}, Limit: {}".format(args.sort_type, args.reverse, len(args.coin)))
-        print("Selected Coin(s): {:}".format(args.coin))
-    else:           # coinmarketcap's top 10
-        print("Sorting by: {}, Reversed: {}, Limit: {}".format(args.sort_type, args.reverse, args.limit))
-        print("Selected Coin(s): Top {}".format(args.limit))
-    if (args.file): # gather data from csv if file argument is passed
-        portfolio = read_csv(args.file)
-        row_len = 145
-    else:
-        row_len = 125
-    t_profit = 0.0
-    avg_p_change = 0.0
-    i_investment = 0.0
-    p_size = 0
-    print_headers(args.file, row_len)
+    print_headers(args, row_len)
+    
     for n_rank, coin in enumerate(sorted_list, start=1):
+        #pass all variables to function that constructs strs array
         name = coin['name']
         symbol = coin['symbol']
         rank = int(coin['rank'])
@@ -214,6 +225,7 @@ def coinmap():
         #           strs[i] = bcolors.BOLD + s + bcolors.ENDC
         # store values
         coin_vals[name] = [n_rank, symbol, price_usd, percent_change_1h, percent_change_24h, percent_change_7d,                   vol_usd_24h, market_cap_usd, rank]
+        ## TODO: Add investment per coin column
         if (args.file):
             profit_str = "{:<7.2f}".format(profit) if profit else " -N/A- "
             p_change_str = "{:>7.2%}".format(p_change) if p_change else " -N/A- "
@@ -223,9 +235,10 @@ def coinmap():
             strs = [n_rank_str, symbol, name, price_str, p_change_1h_str, p_change_24h_str, p_change_7d_str, 
                     vol_str, mcap_str, o_rank_str]
         print_rows(strs, row_len)
-    avg_p_change /= p_size if args.file else 1
-    n_val = t_profit + i_investment
-    t_p_change = (n_val - i_investment)/ i_investment
+    if(args.file):
+        avg_p_change /= p_size if p_size > 0 else 1
+        n_val = t_profit + i_investment
+        t_p_change = (n_val - i_investment)/ i_investment if i_investment > 0 else 0
     print_footers(args.file, row_len, time_stamp, i_investment, t_profit, t_p_change, n_val, avg_p_change)
     
 def get_p_change(orig, curr):
